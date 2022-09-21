@@ -1,0 +1,29 @@
+trigger CheckDuplicateContacts on Contact (before insert) {	//using before trigger so that the records are not yet saved into the system
+
+    string soqlInClauseEmails;
+    for(contact c:trigger.new){
+        if(c.ConvertedFromLeadId__c!=null){  //check if contacts are created from lead, this field is populated when a lead is converted to a contact.
+        if(soqlInClauseEmails==null){
+            soqlInClauseEmails='(\''+c.email+'\'';
+        }else{
+            soqlInClauseEmails+=',\''+c.email+'\'';
+        }
+        }
+    }
+    if(soqlInClauseEmails!=null)soqlInClauseEmails+=')'; 
+    system.debug(soqlInClauseEmails);
+    if(soqlInClauseEmails!=null){//if there is no email address linked.
+         list<contact> duplicatedcontacts =database.query('select id, email from contact where email in '+soqlInClauseEmails);
+           
+    
+        if(duplicatedcontacts.size()>0){
+            //throw an error 
+                string duplicatedEmails='';
+                for(contact c:duplicatedcontacts){     
+                duplicatedEmails+=c.email+'\n';       
+            }
+            system.debug(duplicatedcontacts);
+            throw new DuplicateContactException('duplicate contact email(s)\n'+duplicatedEmails);//prompt the user on all emails that are duplicate.
+        }
+     }
+}
